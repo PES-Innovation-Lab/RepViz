@@ -6,12 +6,7 @@ offsets and counters between the current process and other
 processes. As a result, the bitmap field is not required.
 '''
 class RepCl:
-    def __init__(
-        self,
-        proc_id: int,
-        interval: int,
-        epsilon: int,
-    ) -> None:
+    def __init__(self, proc_id: int, interval: int, epsilon: int) -> None:
         self.proc_id = proc_id    # current process ID
         self.interval = interval  # duration of an epoch (TODO)
         self.epsilon = epsilon    # maximum acceptable clock skew in ms
@@ -46,12 +41,13 @@ class RepCl:
 
         # if the event occured in the same epoch as the last event
         if self.epoch == new_epoch:
+            # update this process's counter
             if self.proc_id in self.counters:
                 # increment this process's counter if it already exists
                 self.counters[self.proc_id] += 1
             else:
-                # or create a counter for this process and start it off with 0
-                self.counters[self.proc_id] = 0
+                # or create a counter for this process and set it to 1
+                self.counters[self.proc_id] = 1
 
         # if the event occurred in a different epoch as the last event
         else:
@@ -71,3 +67,44 @@ class RepCl:
 
         self.epoch = new_epoch  # update the epoch
         self.offsets[self.proc_id] = 0  # must always remain 0
+
+    '''
+    Merge an incoming message's timestamp into self.
+    TODO: implement cases where the incoming message
+          is not of the same epoch as the latest event
+          in the current process.
+    '''
+    def merge(self, other) -> None:
+        # calculate the current epoch
+        new_epoch = max(self.get_current_epoch(self.interval), self.epoch, other.epoch)
+
+        # if the message was sent in the same epoch as the latest event in the current process
+        if other.epoch == new_epoch == self.epoch:
+            # loop through all the counters present in both this timestamp and the other timestamp
+            for p in self.counters.keys() & other.counters.keys():
+                # update them to the max value
+                self.counters[p] = max(self.counters[p], other.counters[p])
+
+            # loop through all the new unseen counters that the other timestamp maintains
+            for p in other.counters.keys() - self.counters.keys():
+                # copy them into our `counters`
+                self.counters[p] = other.counters[p]
+
+            # loop through all the offsets present in both this timestamp and the other timestamp
+            for p in self.offsets.keys() & other.offsets.keys():
+                # update them to the max value
+                self.offsets[p] = max(self.offsets[p], other.offsets[p])
+            self.offsets[self.proc_id] = 0  # must always remain 0
+
+            # loop through all the new unseen offsets that the other timestamp maintains
+            for p in other.offsets.keys() - self.offsets.keys():
+                # copy them into our `offsets`
+                self.offsets[p] = other.offsets[p]
+
+            # update this process's counter
+            if self.proc_id in self.counters:
+                # increment this process's counter if it already exists
+                self.counters[self.proc_id] += 1
+            else:
+                # or create a counter for this process and set it to 1
+                self.counters[self.proc_id] = 1
