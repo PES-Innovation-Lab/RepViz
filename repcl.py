@@ -33,6 +33,17 @@ class RepCl:
         return int(time.time() * 1000 / interval)
 
     '''
+    Increment the counter corresponding to this process
+    '''
+    def inc_counter(self) -> None:
+        if self.proc_id in self.counters:
+            # increment this process's counter if it already exists
+            self.counters[self.proc_id] += 1
+        else:
+            # or create a counter for this process and set it to 1
+            self.counters[self.proc_id] = 1
+
+    '''
     Advance the clock by one timestep
     '''
     def advance(self) -> None:
@@ -41,13 +52,7 @@ class RepCl:
 
         # if the event occured in the same epoch as the last event
         if self.epoch == new_epoch:
-            # update this process's counter
-            if self.proc_id in self.counters:
-                # increment this process's counter if it already exists
-                self.counters[self.proc_id] += 1
-            else:
-                # or create a counter for this process and set it to 1
-                self.counters[self.proc_id] = 1
+            self.inc_counter()  # update counter
 
         # if the event occurred in a different epoch as the last event
         else:
@@ -85,7 +90,7 @@ class RepCl:
                 # update them to the max value
                 self.counters[p] = max(self.counters[p], other.counters[p])
 
-            # loop through all the new unseen counters that the other timestamp maintains
+            # loop through all the new counters that the other timestamp maintains
             for p in other.counters.keys() - self.counters.keys():
                 # copy them into our `counters`
                 self.counters[p] = other.counters[p]
@@ -96,15 +101,56 @@ class RepCl:
                 self.offsets[p] = max(self.offsets[p], other.offsets[p])
             self.offsets[self.proc_id] = 0  # must always remain 0
 
-            # loop through all the new unseen offsets that the other timestamp maintains
+            # loop through all the new offsets that the other timestamp maintains
             for p in other.offsets.keys() - self.offsets.keys():
                 # copy them into our `offsets`
                 self.offsets[p] = other.offsets[p]
 
-            # update this process's counter
-            if self.proc_id in self.counters:
-                # increment this process's counter if it already exists
-                self.counters[self.proc_id] += 1
+            self.inc_counter()  # update counter
+
+        # if the message is lagging behind
+        elif new_epoch == self.epoch:
+            self.inc_counter()  # update counter
+
+            # offset of the timestamp of the incoming message
+            msg_offset = self.epoch - other.epoch
+
+            # loop through all the new offsets that the other timestamp maintains
+            for p in other.offsets.keys() - self.offsets.keys():
+                # TODO: finish commenting the code
+                if (new_offset := other.offsets[p] + msg_offset) < self.epsilon:
+                    self.offsets[p] = new_offset
+
+            if msg_offset < self.epsilon:
+                for p in other.counters.keys() - self.counters.keys():
+                    self.counters[key] = other.counters[p]
+
+            if msg_offset < self.epsilon:
+                self.offsets[other.proc_id] = msg_offset
             else:
-                # or create a counter for this process and set it to 1
-                self.counters[self.proc_id] = 1
+                if other.proc_id in self.offsets:
+                    del self.offsets[other.proc_id]
+
+        # if the message is leading
+        elif new_epoch == other.epoch:
+            # offset of the timestamp of the incoming message
+            msg_offset = other.epoch - self.epoch
+
+            # update our counters to the ones in the timestamp of the incoming message
+            for p in other.counters.keys():
+                self.counters[p] = other.counters[p]
+
+            for p in self.offsets.keys():
+                if self.offsets[p] + mssg_offset < self.epsilon:
+                    self.offsets[p] += msg_offset
+
+            for p in other.offsets.keys():
+                self.offsets[p] = other.offsets[p]
+
+            self.epoch = other.epoch
+
+        else:
+            # in all other cases, simply advance the clock
+            self.advance()
+
+        self.offsets[self.proc_id] = 0  # must always remain 0
