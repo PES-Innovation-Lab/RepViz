@@ -6,7 +6,7 @@ offsets and counters between the current process and other
 processes. As a result, the bitmap field is not required.
 '''
 class RepCl:
-    def __init__(self, proc_id: int, interval: int, epsilon: int) -> None:
+    def __init__(self, proc_id: int, interval: int, epsilon: float) -> None:
         self.proc_id = proc_id    # current process ID
         self.interval = interval  # duration of an epoch (TODO)
         self.epsilon = epsilon    # maximum acceptable clock skew in ms
@@ -123,7 +123,7 @@ class RepCl:
 
             if msg_offset < self.epsilon:
                 for p in other.counters.keys() - self.counters.keys():
-                    self.counters[key] = other.counters[p]
+                    self.counters[p] = other.counters[p]
 
             if msg_offset < self.epsilon:
                 self.offsets[other.proc_id] = msg_offset
@@ -141,7 +141,7 @@ class RepCl:
                 self.counters[p] = other.counters[p]
 
             for p in self.offsets.keys():
-                if self.offsets[p] + mssg_offset < self.epsilon:
+                if self.offsets[p] + msg_offset < self.epsilon:
                     self.offsets[p] += msg_offset
 
             for p in other.offsets.keys():
