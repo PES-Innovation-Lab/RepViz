@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 
-'''
-This program is meant to be run twice.
-It simulates two processes talking to each other.
-'''
-
-import sys
 import time
 import math
 import socket
@@ -13,14 +7,18 @@ import pickle
 import random
 from repcl import RepCl
 from message import Message
+from dotenv import load_dotenv
+import os 
 
-if len(sys.argv) != 4:
-    print(f'usage: python3 {sys.argv[0]} this_proc_id other_proc_id')
-    exit(0)
+load_dotenv()
 
-proc_id = int(sys.argv[1])
-other_proc_id = int(sys.argv[2])
-other_domain = sys.argv[3]
+# name of the current node
+proc_id = int(os.getenv("PROC_ID"))
+node_name = os.getenv("NODE_NAME")
+list_of_nodes = os.getenv("LIST_OF_NODES").split(",")
+
+print(f'Node {node_name} with id {proc_id} is running')
+print(f'List of nodes: {list_of_nodes}')
 
 # interval is 1 seconds so its easier to keep track in real time
 clock = RepCl(proc_id=proc_id, interval=1000, epsilon=math.inf)
@@ -28,7 +26,7 @@ print(clock)
 
 # use a udp socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(('', proc_id))  # use proc_id as port
+sock.bind(('', 8080))  
 sock.setblocking(False)   # use non blocking sockets
 
 while True:
@@ -44,15 +42,16 @@ while True:
         pass
 
     try:
-        # 80% chance a local event happens
-        if random.randint(1, 100) < 80:
+        # pick a random node to send to which is not the current node
+        other_node = random.choice(list_of_nodes)
+        
+        if other_node == node_name:
             clock.advance()
             print('local event at', clock)
+        else:
+            # send a message to the other node
+            sock.sendto(pickle.dumps(Message(clock, f'{node_name} to {other_node}'.encode())), (other_node, 8080))
 
-        # 50% chance we send a message
-        if random.randint(1, 100) < 50:
-            clock.advance()
-            sock.sendto(pickle.dumps(Message(clock, f'{proc_id} to {other_proc_id}'.encode())), (other_domain, other_proc_id))
     except Exception as e:
         pass
 
