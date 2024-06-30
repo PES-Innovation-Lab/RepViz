@@ -1,0 +1,18 @@
+version: "3.8"
+
+# just run "docker compose up", and two containers will start :D
+
+services:
+  node1: 
+    image: repcl
+    container_name: node1
+    ports:
+      - "8080:8080"
+    command: ["python", "main.py", "8080", "9090", "node2"]
+
+  node2:
+    image: repcl
+    container_name: node2
+    ports:
+      - "9090:9090"
+    command: ["python", "main.py", "9090", "8080", "node1"]
