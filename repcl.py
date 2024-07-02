@@ -6,10 +6,12 @@ offsets and counters between the current process and other
 processes. As a result, the bitmap field is not required.
 '''
 class RepCl:
-    def __init__(self, proc_id: int, interval: int, epsilon: float) -> None:
-        self.proc_id = proc_id    # current process ID
-        self.interval = interval  # duration of an epoch (TODO)
-        self.epsilon = epsilon    # maximum acceptable clock skew in ms
+    def __init__(self, proc_id: int, proc_count: int, field_width: int, interval: int, epsilon: float) -> None:
+        self.proc_id = proc_id        # current process ID
+        self.proc_count = proc_count  # total number of processes
+        self.field_width = field_width    # width of each field in the clock
+        self.interval = interval      # duration of an epoch (TODO)
+        self.epsilon = epsilon        # maximum acceptable clock skew in ms
         # epoch of the current process (current time in ms divided by the interval)
         self.epoch = self.get_current_epoch(interval)
 
@@ -38,10 +40,29 @@ class RepCl:
     def inc_counter(self) -> None:
         if self.proc_id in self.counters:
             # increment this process's counter if it already exists
-            self.counters[self.proc_id] += 1
+            if (self.counters[self.proc_id] + 1) < 2 ** self.field_width:
+                self.counters[self.proc_id] += 1
         else:
             # or create a counter for this process and set it to 1
             self.counters[self.proc_id] = 1
+
+    '''
+    Set a particular offset to a given value, with bounds checking
+    '''
+    def set_offset(self, proc_id: int, value: int) -> None:
+        if (value + 1) < 2 ** self.field_width:
+            self.offsets[proc_id] = value
+        else:
+            self.offsets[proc_id] = (2 ** self.field_width) - 1
+
+    '''
+    Set a particular counter to a given value, with bounds checking
+    '''
+    def set_counter(self, proc_id: int, value: int) -> None:
+        if (value + 1) < 2 ** self.field_width:
+            self.counters[proc_id] = value
+        else:
+            self.counters[proc_id] = (2 ** self.field_width) - 1
 
     '''
     Advance the clock by one timestep
@@ -68,10 +89,12 @@ class RepCl:
                     del self.offsets[p]
                 else:
                     # store the re-computed offset if it is still under epsilon
-                    self.offsets[p] = new_offset
+                    # self.offsets[p] = new_offset
+                    self.set_offset(p, new_offset)
 
         self.epoch = new_epoch  # update the epoch
-        self.offsets[self.proc_id] = 0  # must always remain 0
+        # self.offsets[self.proc_id] = 0  # must always remain 0
+        self.set_offset(self.proc_id, 0)  # must always remain 0
 
     '''
     Merge an incoming message's timestamp into self.
@@ -88,23 +111,28 @@ class RepCl:
             # loop through all the counters present in both this timestamp and the other timestamp
             for p in self.counters.keys() & other.counters.keys():
                 # update them to the max value
-                self.counters[p] = max(self.counters[p], other.counters[p])
+                # self.counters[p] = max(self.counters[p], other.counters[p])
+                self.set_counter(p, max(self.counters[p], other.counters[p]))
 
             # loop through all the new counters that the other timestamp maintains
             for p in other.counters.keys() - self.counters.keys():
                 # copy them into our `counters`
-                self.counters[p] = other.counters[p]
+                # self.counters[p] = other.counters[p]
+                self.set_counter(p, other.counters[p])
 
             # loop through all the offsets present in both this timestamp and the other timestamp
             for p in self.offsets.keys() & other.offsets.keys():
                 # update them to the max value
-                self.offsets[p] = max(self.offsets[p], other.offsets[p])
-            self.offsets[self.proc_id] = 0  # must always remain 0
+                # self.offsets[p] = max(self.offsets[p], other.offsets[p])
+                self.set_offset(p, max(self.offsets[p], other.offsets[p]))
+            # self.offsets[self.proc_id] = 0  # must always remain 0
+            self.set_offset(self.proc_id, 0)  # must always remain 0
 
             # loop through all the new offsets that the other timestamp maintains
             for p in other.offsets.keys() - self.offsets.keys():
                 # copy them into our `offsets`
-                self.offsets[p] = other.offsets[p]
+                # self.offsets[p] = other.offsets[p]
+                self.set_offset(p, other.offsets[p])
 
             self.inc_counter()  # update counter
 
@@ -119,14 +147,17 @@ class RepCl:
             for p in other.offsets.keys() - self.offsets.keys():
                 # TODO: finish commenting the code
                 if (new_offset := other.offsets[p] + msg_offset) < self.epsilon:
-                    self.offsets[p] = new_offset
+                    # self.offsets[p] = new_offset
+                    self.set_offset(p, new_offset)
 
             if msg_offset < self.epsilon:
                 for p in other.counters.keys() - self.counters.keys():
-                    self.counters[p] = other.counters[p]
+                    # self.counters[p] = other.counters[p]
+                    self.set_counter(p, other.counters[p])
 
             if msg_offset < self.epsilon:
-                self.offsets[other.proc_id] = msg_offset
+                # self.offsets[other.proc_id] = msg_offset
+                self.set_offset(other.proc_id, msg_offset)
             else:
                 if other.proc_id in self.offsets:
                     del self.offsets[other.proc_id]
@@ -138,14 +169,17 @@ class RepCl:
 
             # update our counters to the ones in the timestamp of the incoming message
             for p in other.counters.keys():
-                self.counters[p] = other.counters[p]
+                # self.counters[p] = other.counters[p]
+                self.set_counter(p, other.counters[p])
 
             for p in self.offsets.keys():
                 if self.offsets[p] + msg_offset < self.epsilon:
-                    self.offsets[p] += msg_offset
+                    # self.offsets[p] += msg_offset
+                    self.set_offset(p, self.offsets[p] + msg_offset)
 
             for p in other.offsets.keys():
-                self.offsets[p] = other.offsets[p]
+                # self.offsets[p] = other.offsets[p]
+                self.set_offset(p, other.offsets[p])
 
             self.epoch = other.epoch
 
@@ -153,4 +187,5 @@ class RepCl:
             # in all other cases, simply advance the clock
             self.advance()
 
-        self.offsets[self.proc_id] = 0  # must always remain 0
+        # self.offsets[self.proc_id] = 0  # must always remain 0
+        self.set_offset(self.proc_id, 0)  # must always remain 0
