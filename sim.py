@@ -24,16 +24,17 @@ veccl = [VecCl(i, PROC_COUNT, VECCL_COUNTER_WIDTH) for i in range(PROC_COUNT)]
 while True:
     proc_id = random.randint(0, PROC_COUNT - 1)
     other_proc_id = random.randint(0, PROC_COUNT - 1)
+    
+    timeVec = None
+    timeRep = None
 
     if proc_id == other_proc_id:
-        repcl[proc_id].advance()
-        veccl[proc_id].advance()
+        timeRep = repcl[proc_id].advance()
+        timeVec = veccl[proc_id].advance()
     else:
-        repcl[proc_id].merge(repcl[other_proc_id])
-        veccl[proc_id].merge(veccl[other_proc_id])
+        timeRep = repcl[proc_id].merge(repcl[other_proc_id])
+        timeVec = veccl[proc_id].merge(veccl[other_proc_id])
 
-    print(repcl)
-    print(veccl)
-    print()
+    print(f"RepCl: {timeRep}, VecCl: {timeVec}")
 
     time.sleep(0.8)

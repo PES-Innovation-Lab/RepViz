@@ -16,10 +16,20 @@ class VecCl:
         return f'VectorCl(proc_id={self.proc_id}, counters={self.counter_array})'
 
     def advance(self) -> None:
+        starttime = time.time()
+
         if (self.counter_array[self.proc_id] + 1) < 2**self.counter_bit_width:
             self.counter_array[self.proc_id] += 1
+        endtime = time.time()
+
+        return endtime - starttime
 
     def merge(self, other_counter) -> None:
+        starttime = time.time()
+
         for i in range(self.proc_count):
             self.counter_array[i] = max(self.counter_array[i], other_counter.counter_array[i])
         self.advance()
+
+        endtime = time.time()
+        return endtime - starttime
