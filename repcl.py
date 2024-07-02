@@ -67,7 +67,9 @@ class RepCl:
     '''
     Advance the clock by one timestep
     '''
-    def advance(self) -> None:
+    def advance(self) -> float:
+        start_time = time.time()  # record the start time
+
         # calculate the current epoch
         new_epoch = max(self.get_current_epoch(self.interval), self.epoch)
 
@@ -96,13 +98,18 @@ class RepCl:
         # self.offsets[self.proc_id] = 0  # must always remain 0
         self.set_offset(self.proc_id, 0)  # must always remain 0
 
+        end_time = time.time()  # record the end time
+        return end_time - start_time
+
     '''
     Merge an incoming message's timestamp into self.
     TODO: implement cases where the incoming message
           is not of the same epoch as the latest event
           in the current process.
     '''
-    def merge(self, other) -> None:
+    def merge(self, other) -> float:
+        start_time = time.time()  # record the start time
+
         # calculate the current epoch
         new_epoch = max(self.get_current_epoch(self.interval), self.epoch, other.epoch)
 
@@ -189,3 +196,6 @@ class RepCl:
 
         # self.offsets[self.proc_id] = 0  # must always remain 0
         self.set_offset(self.proc_id, 0)  # must always remain 0
+
+        end_time = time.time()  # record the end time
+        return end_time - start_time

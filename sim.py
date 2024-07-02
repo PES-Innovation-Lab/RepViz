@@ -24,7 +24,7 @@ veccl = [VecCl(i, PROC_COUNT, VECCL_COUNTER_WIDTH) for i in range(PROC_COUNT)]
 while True:
     proc_id = random.randint(0, PROC_COUNT - 1)
     other_proc_id = random.randint(0, PROC_COUNT - 1)
-    
+
     if proc_id == other_proc_id:
         repcl[proc_id].advance()
         veccl[proc_id].advance()
