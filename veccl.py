@@ -13,13 +13,13 @@ class VecCl:
         self.counter_array = [0 for _ in range(proc_count)]
 
     def __repr__(self) -> str:
-        return f'VectorCl(proc_id={self.proc_id}, counters={self.counters})'
+        return f'VectorCl(proc_id={self.proc_id}, counters={self.counter_array})'
 
-    def advance(self, proc_id) -> None:
-        if (self.counter_array[proc_id] + 1) < 2**self.counter_bit_width:
-            self.counter_array[proc_id] += 1
+    def advance(self) -> None:
+        if (self.counter_array[self.proc_id] + 1) < 2**self.counter_bit_width:
+            self.counter_array[self.proc_id] += 1
 
     def merge(self, other_counter) -> None:
         for i in range(self.proc_count):
-            self.counter_array[i] = max(self.counter_array[i], other_counter[i])
-        self.advance(self.proc_id)
+            self.counter_array[i] = max(self.counter_array[i], other_counter.counter_array[i])
+        self.advance()
