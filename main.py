@@ -33,11 +33,18 @@ while True:
     try:
         # receive message if any
         data, addr = sock.recvfrom(2048)
+
+        # Logging time when message was received (in seconds)
+        rcv_time = time.time()
         message: Message = pickle.loads(data)
 
         # update local clock
         clock.merge(message.clock)
         print('received', message)
+        sent_time = message.clock.epoch * message.clock.interval * 1000  # time msg was sent in seconds
+
+        print(f"Delay in receipt : {rcv_time - sent_time} seconds")
+        
     except BlockingIOError as e:
         pass
 
