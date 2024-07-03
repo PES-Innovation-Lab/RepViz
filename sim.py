@@ -24,7 +24,7 @@ veccl = [VecCl(i, PROC_COUNT, VECCL_COUNTER_WIDTH) for i in range(PROC_COUNT)]
 while True:
     proc_id = random.randint(0, PROC_COUNT - 1)
     other_proc_id = random.randint(0, PROC_COUNT - 1)
-    
+
     timeVec = None
     timeRep = None
 
