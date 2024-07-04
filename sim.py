@@ -25,14 +25,24 @@ while True:
     proc_id = random.randint(0, PROC_COUNT - 1)
     other_proc_id = random.randint(0, PROC_COUNT - 1)
 
-    repeat = 1_000_000
+    repeat = 5_000
     repcl_time = 0
     veccl_time = 0
-    for i in range(repeat):
-        tmp_repcl = repcl[proc_id]
-        tmp_veccl = veccl[proc_id]
-        repcl_time += tmp_repcl.send_local()
-        veccl_time += tmp_veccl.advance()
+
+    if proc_id == other_proc_id:
+        print('local: ', end='')
+        for i in range(repeat):
+            tmp_repcl = repcl[proc_id]
+            tmp_veccl = veccl[proc_id]
+            repcl_time += tmp_repcl.send_local()
+            veccl_time += tmp_veccl.advance()
+    else:
+        print('merge: ', end='')
+        for i in range(repeat):
+            tmp_repcl = repcl[proc_id]
+            tmp_veccl = veccl[proc_id]
+            repcl_time += tmp_repcl.recv(repcl[other_proc_id])
+            veccl_time += tmp_veccl.merge(veccl[other_proc_id])
 
     print(f'RepCl: {repcl_time / repeat}, VecCl: {veccl_time / repeat}')
 
