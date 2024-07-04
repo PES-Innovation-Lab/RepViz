@@ -1,16 +1,33 @@
 #!/usr/bin/env python3
 
+import random
 import time
-import math
 import socket
 import pickle
-import random
+import math
+import os
 from repcl import RepCl
-from message import Message
+from veccl import VecCl
 from dotenv import load_dotenv
-import os 
+from message import Message
 
 load_dotenv()
+
+'''
+This program compares the performance of
+vector clocks and replay clocks
+'''
+
+PROC_COUNT = 32
+
+VECCL_COUNTER_WIDTH = 64
+
+REPCL_FIELD_WIDTH = 64
+REPCL_INTERVAL = 1
+REPCL_EPSILON = 1
+
+repcl = [RepCl(i, REPCL_FIELD_WIDTH, 1, 1) for i in range(PROC_COUNT)]
+veccl = [VecCl(i, PROC_COUNT, VECCL_COUNTER_WIDTH) for i in range(PROC_COUNT)]
 
 # name of the current node
 proc_id = int(os.getenv("PROC_ID"))
@@ -20,13 +37,9 @@ list_of_nodes = os.getenv("LIST_OF_NODES").split(",")
 print(f'Node {node_name} with id {proc_id} is running')
 print(f'List of nodes: {list_of_nodes}')
 
-# interval is 1 seconds so its easier to keep track in real time
-clock = RepCl(proc_id=proc_id, interval=1000, epsilon=math.inf)
-print(clock)
-
 # use a udp socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(('', 8080))  
+sock.bind(('', 3000))  
 sock.setblocking(False)   # use non blocking sockets
 
 while True:
@@ -35,17 +48,22 @@ while True:
         data, addr = sock.recvfrom(2048)
 
         # Logging time when message was received (in seconds)
-        rcv_time = time.time()
         message: Message = pickle.loads(data)
 
         # update local clock
-        clock.merge(message.clock)
-        print('received', message)
-        sent_time = message.clock.epoch * message.clock.interval * 1000  # time msg was sent in seconds
-
-        print(f"Delay in receipt : {rcv_time - sent_time} seconds")
+        # clock.merge(message.clock)
+        # print('received', message)
         
-    except BlockingIOError as e:
+        # sent_time = message.clock.epoch * message.clock.interval * 1000  # time msg was sent in seconds
+
+        # print(f"Delay in receipt : {rcv_time - sent_time} seconds")
+        
+        repclTime = repcl[proc_id].recv(message.repcl)
+        vecclTime = veccl[proc_id].merge(message.veccl)
+
+        print(f"Time taken by RepCl to receive from {message.proc_id}: {repclTime}")
+        print(f"Time taken by VecCl to receive from {message.proc_id}: {vecclTime}", end="\n\n")
+    except Exception as e:
         pass
 
     try:
@@ -53,11 +71,13 @@ while True:
         other_node = random.choice(list_of_nodes)
         
         if other_node == node_name:
-            clock.advance()
-            print('local event at', clock)
+            repclTime = repcl[proc_id].send_local()
+            vecclTime = veccl[proc_id].advance()
+
+            print(f"Time taken by RepCl to advance: {repclTime}")
+            print(f"Time taken by VecCl to advance: {vecclTime}", end="\n\n")
         else:
-            # send a message to the other node
-            sock.sendto(pickle.dumps(Message(clock, f'{node_name} to {other_node}'.encode())), (other_node, 8080))
+            sock.sendto(pickle.dumps(Message(proc_id, repcl[proc_id], veccl[proc_id], f'{node_name} to {other_node}'.encode())), (other_node, 3000))
 
     except Exception as e:
         pass

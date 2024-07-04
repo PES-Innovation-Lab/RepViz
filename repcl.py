@@ -1,156 +1,177 @@
 import time
+import numpy as np
+import math
 
-'''
-Implementation of Replay Clock that uses dicts to store
-offsets and counters between the current process and other
-processes. As a result, the bitmap field is not required.
-'''
 class RepCl:
-    def __init__(self, proc_id: int, interval: int, epsilon: float) -> None:
-        self.proc_id = proc_id    # current process ID
-        self.interval = interval  # duration of an epoch (TODO)
-        self.epsilon = epsilon    # maximum acceptable clock skew in ms
-        # epoch of the current process (current time in ms divided by the interval)
-        self.epoch = self.get_current_epoch(interval)
+    def __init__(self, proc_id: np.uint64, interval: int, epsilon: float, bits_per_offset: int) -> None:
+        self.proc_id: np.uint64 = proc_id
+        self.interval = interval
+        self.epsilon = epsilon
+        self.bits_per_offset = bits_per_offset
 
-        # offsets in a (key: val) format.
-        # (proc_id: offset of process `proc_id` with respect to this process)
-        self.offsets = {proc_id: 0}  # offset with respect to this process is always 0
-
-        # counters in a (key: val) format.
-        # (proc_id: counter of process `proc_id` with respect to this process)
-        self.counters = {}
+        self.hlc: np.uint64 = self.get_current_epoch()
+        self.offset_bmp: np.uint64 = np.uint64(0)
+        self.offsets: np.uint64 = np.uint64(0)
+        self.counters: np.uint64 = np.uint64(0)
 
     def __repr__(self) -> str:
-        return f'RepCl(proc_id={self.proc_id}, epoch={self.epoch}, offsets={self.offsets}, counters={self.counters})'
+        offset_bmp = bin(self.offset_bmp)[2:].zfill(64)
+        offsets = bin(self.offsets)[2:].zfill(64)
+        counters = bin(self.counters)[2:].zfill(64)
+        return f'RepCl(\n\tproc_id:\t{self.proc_id},\n\thlc:\t\t{self.hlc},\n\toffset_bmp:\t{offset_bmp},\n\toffsets:\t{offsets},\n\tcounters:\t{counters}\n)'
 
-    '''
-    Use system time and calculate the current epoch as
-    (unix timestamp in ms) / interval
-    '''
+    def get_current_epoch(self) -> np.uint64:
+        return np.uint64(time.time() * 1000 / self.interval)
+
     @staticmethod
-    def get_current_epoch(interval: int) -> int:
-        return int(time.time() * 1000 / interval)
+    def extract(number, k, p):
+        return ((1 << k) - 1) & (number >> p)
 
-    '''
-    Increment the counter corresponding to this process
-    '''
-    def inc_counter(self) -> None:
-        if self.proc_id in self.counters:
-            # increment this process's counter if it already exists
-            self.counters[self.proc_id] += 1
-        else:
-            # or create a counter for this process and set it to 1
-            self.counters[self.proc_id] = 1
+    def remove_offset_at_index(self, index):
+        # 010 011 101
+        #   2   1   0
 
-    '''
-    Advance the clock by one timestep
-    '''
-    def advance(self) -> None:
-        # calculate the current epoch
-        new_epoch = max(self.get_current_epoch(self.interval), self.epoch)
+        # 010 101 111 010 011
+        # 000 010 101 000 000 
 
-        # if the event occured in the same epoch as the last event
-        if self.epoch == new_epoch:
-            self.inc_counter()  # update counter
 
-        # if the event occurred in a different epoch as the last event
-        else:
-            # delete all counters because a new epoch was entered
-            self.counters.clear()
+        new_offset = self.offsets >> self.bits_per_offset
+        new_offset = new_offset >> (index * self.bits_per_offset)
+        new_offset = new_offset << (index * self.bits_per_offset)
 
-            # loop through all the offsets
-            for p in list(self.offsets.keys()):
-                # re-compute the offset with the new epoch
-                new_offset = self.offsets[p] + new_epoch - self.epoch  # calculate the new offset
-                if new_offset >= self.epsilon:
-                    # remove the offset if it is greater than epsilon
-                    del self.offsets[p]
-                else:
-                    # store the re-computed offset if it is still under epsilon
-                    self.offsets[p] = new_offset
+        self.offsets = self.offsets << (64 - (index * self.bits_per_offset))
+        self.offsets = self.offsets >> (64 - (index * self.bits_per_offset))
 
-        self.epoch = new_epoch  # update the epoch
-        self.offsets[self.proc_id] = 0  # must always remain 0
+        self.offsets |= new_offset
 
-    '''
-    Merge an incoming message's timestamp into self.
-    TODO: implement cases where the incoming message
-          is not of the same epoch as the latest event
-          in the current process.
-    '''
-    def merge(self, other) -> None:
-        # calculate the current epoch
-        new_epoch = max(self.get_current_epoch(self.interval), self.epoch, other.epoch)
+    def shift(self, new_hlc):
+        index = 0
 
-        # if the message was sent in the same epoch as the latest event in the current process
-        if other.epoch == new_epoch == self.epoch:
-            # loop through all the counters present in both this timestamp and the other timestamp
-            for p in self.counters.keys() & other.counters.keys():
-                # update them to the max value
-                self.counters[p] = max(self.counters[p], other.counters[p])
+        bitmap = self.offset_bmp
+        while (bitmap > 0):
+            process_id: np.uint64 = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
+            offset_at_index = self.get_offset_at_index(index)
+            new_offset = min(new_hlc - (self.hlc - offset_at_index), self.epsilon)
 
-            # loop through all the new counters that the other timestamp maintains
-            for p in other.counters.keys() - self.counters.keys():
-                # copy them into our `counters`
-                self.counters[p] = other.counters[p]
-
-            # loop through all the offsets present in both this timestamp and the other timestamp
-            for p in self.offsets.keys() & other.offsets.keys():
-                # update them to the max value
-                self.offsets[p] = max(self.offsets[p], other.offsets[p])
-            self.offsets[self.proc_id] = 0  # must always remain 0
-
-            # loop through all the new offsets that the other timestamp maintains
-            for p in other.offsets.keys() - self.offsets.keys():
-                # copy them into our `offsets`
-                self.offsets[p] = other.offsets[p]
-
-            self.inc_counter()  # update counter
-
-        # if the message is lagging behind
-        elif new_epoch == self.epoch:
-            self.inc_counter()  # update counter
-
-            # offset of the timestamp of the incoming message
-            msg_offset = self.epoch - other.epoch
-
-            # loop through all the new offsets that the other timestamp maintains
-            for p in other.offsets.keys() - self.offsets.keys():
-                # TODO: finish commenting the code
-                if (new_offset := other.offsets[p] + msg_offset) < self.epsilon:
-                    self.offsets[p] = new_offset
-
-            if msg_offset < self.epsilon:
-                for p in other.counters.keys() - self.counters.keys():
-                    self.counters[p] = other.counters[p]
-
-            if msg_offset < self.epsilon:
-                self.offsets[other.proc_id] = msg_offset
+            if (new_offset >= self.epsilon):
+                self.remove_offset_at_index(index)
+                self.offset_bmp = self.offset_bmp & np.uint64(~(1 << process_id))
             else:
-                if other.proc_id in self.offsets:
-                    del self.offsets[other.proc_id]
+                self.set_offset_at_index(index, new_offset)
+                self.offset_bmp = self.offset_bmp | np.uint64(1 << process_id)
 
-        # if the message is leading
-        elif new_epoch == other.epoch:
-            # offset of the timestamp of the incoming message
-            msg_offset = other.epoch - self.epoch
+            bitmap = bitmap & (bitmap - 1)
+            index += 1
 
-            # update our counters to the ones in the timestamp of the incoming message
-            for p in other.counters.keys():
-                self.counters[p] = other.counters[p]
+        self.hlc = new_hlc
 
-            for p in self.offsets.keys():
-                if self.offsets[p] + msg_offset < self.epsilon:
-                    self.offsets[p] += msg_offset
+    def set_offset_at_index(self, index, new_offset):
+        if new_offset > (1 << self.bits_per_offset) - 1:
+            raise ValueError('Offset value too large')
 
-            for p in other.offsets.keys():
-                self.offsets[p] = other.offsets[p]
+        mask = np.uint64((1 << self.bits_per_offset) - 1) << (index * self.bits_per_offset)
+        mask = ~mask
 
-            self.epoch = other.epoch
+        self.offsets = self.offsets & mask
+        self.offsets = self.offsets | (new_offset << (index * self.bits_per_offset))
 
+    def get_offset_at_index(self, index):
+        offset = self.extract(self.offsets, self.bits_per_offset, index * self.bits_per_offset)
+        return offset
+
+    @staticmethod
+    def hamming_weight(v: np.uint32) -> int:
+        v = v - ((v >> 1) & 0x55555555)
+        v = np.uint32((v & 0x33333333) + ((v >> 2) & 0x33333333))
+        count = ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24
+        return count
+
+    @staticmethod
+    def get_index_from_proc_id(bitmap: np.uint64, proc_id: np.uint64) -> int:
+        bmp_lo: np.uint32 = np.uint32(bitmap & ((1 << 32) - 1))
+        if proc_id < 32:
+            bmp_lo <<= (32 - proc_id)
+            return RepCl.hamming_weight(bmp_lo)
+        bmp_hi: np.uint32 = np.uint32(bitmap >> 32)
+        bmp_hi <<= (64 - proc_id)
+        return RepCl.hamming_weight(bmp_hi) + RepCl.hamming_weight(bmp_lo)
+
+    def send_local(self) -> float:
+        startime = time.time()
+
+        new_hlc = max(self.hlc, self.get_current_epoch())
+        new_offset = new_hlc - self.hlc
+        offset_at_pid = self.get_offset_at_index(self.proc_id)
+
+        if (new_hlc == self.hlc and offset_at_pid <= new_offset):
+            self.counters += 1
+        elif (new_hlc == self.hlc):
+            new_offset = min(new_offset, offset_at_pid)
+
+            index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
+            self.set_offset_at_index(index, new_offset)
+            self.offset_bmp |= np.uint64(1 << self.proc_id)
+
+            self.counters = np.uint64(0)
+            self.offset_bmp = self.offset_bmp | np.uint64(1 << self.proc_id)
         else:
-            # in all other cases, simply advance the clock
-            self.advance()
+            self.counters = np.uint64(0)
+            self.shift(new_hlc)
 
-        self.offsets[self.proc_id] = 0  # must always remain 0
+            index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
+            self.set_offset_at_index(index, 0)
+            self.offset_bmp |= np.uint64(1 << self.proc_id)
+
+        endtime = time.time()
+        return endtime - startime
+
+    def merge_same_epoch(self, other: 'RepCl') -> None:
+        self.offset_bmp |= other.offset_bmp
+        bitmap = self.offset_bmp
+        index = 0
+        while bitmap > 0:
+            pos = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
+            new_offset = min(self.get_offset_at_index(index), other.get_offset_at_index(index))
+            if new_offset >= self.epsilon:
+                self.remove_offset_at_index(index)
+                self.offset_bmp &= ~np.uint64(1 << pos)
+            else:
+                self.set_offset_at_index(index, new_offset)
+                self.offset_bmp |= np.uint64(1 << pos)
+
+            bitmap &= bitmap - 1
+            index += 1
+
+    def equal_offset(self, other: 'RepCl') -> bool:
+        if (other.hlc != self.hlc) or (other.offset_bmp != self.offset_bmp) or (other.offsets != self.offsets):
+            return False
+        return True
+
+    def recv(self, other: 'RepCl') -> float:
+        start_time = time.time()  # record start time
+        new_hlc = max(self.hlc, other.hlc, self.get_current_epoch())
+        a = self
+        b = other
+
+        a.shift(new_hlc)
+        a.merge_same_epoch(b)
+
+        if self.equal_offset(a) and other.equal_offset(a):
+            a.counters = max(a.counters, other.counters)
+            a.counters += 1
+        elif self.equal_offset(a) and not other.equal_offset(a):
+            a.counters += 1
+        elif not self.equal_offset(a) and other.equal_offset(a):
+            a.counters = other.counters
+            a.counters += 1
+        else:
+            a.counters = np.uint64(0)
+
+        self = a
+
+        index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
+        self.set_offset_at_index(index, 0)
+        self.offset_bmp |= np.uint64(1 << self.proc_id)
+
+        end_time = time.time()  # record end time
+        return end_time - start_time
