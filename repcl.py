@@ -116,6 +116,7 @@ class RepCl:
                 if (process_id == self.proc_id):
                     self.set_offset_at_index(index, 0)
                     self.offset_bmp = self.offset_bmp | (1 << process_id)
+                    break
 
                 bitmap = bitmap & (bitmap - 1)
                 index += 1
@@ -175,6 +176,7 @@ class RepCl:
             proc_id = int(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
             if proc_id == self.proc_id:
                 self.set_offset_at_index(index, 0)
+                break
 
             bitmap = bitmap & (bitmap - 1)
             index += 1
