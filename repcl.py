@@ -146,7 +146,8 @@ class RepCl:
             return False
         return True
 
-    def recv(self, other: 'RepCl') -> None:
+    def recv(self, other: 'RepCl') -> float:
+        start_time = time.time()  # record start time
         new_hlc = max(self.hlc, other.hlc, self.get_current_epoch())
         a = self
         b = other
@@ -178,3 +179,6 @@ class RepCl:
             index += 1
 
         self.offset_bmp |= 1 << self.proc_id
+
+        end_time = time.time()  # record end time
+        return end_time - start_time
