@@ -79,7 +79,7 @@ class RepCl:
         offset = self.extract(self.offsets, self.bits_per_offset, index * self.bits_per_offset)
         return offset
 
-    def send_local(self) -> None:
+    def send_local(self) -> float:
         startime = time.time()
 
         new_hlc = max(self.hlc, self.get_current_epoch())
@@ -123,3 +123,58 @@ class RepCl:
 
         endtime = time.time()
         return endtime - startime
+
+    def merge_same_epoch(self, other: 'RepCl') -> None:
+        self.offset_bmp |= other.offset_bmp
+        bitmap = self.offset_bmp
+        index = 0
+        while bitmap > 0:
+            pos = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
+            new_offset = min(self.get_offset_at_index(index), other.get_offset_at_index(index))
+            if new_offset >= self.epsilon:
+                self.remove_offset_at_index(index)
+                self.offset_bmp &= ~(1 << pos)
+            else:
+                self.set_offset_at_index(index, new_offset)
+                self.offset_bmp |= 1 << pos
+
+            bitmap &= bitmap - 1
+            index += 1
+
+    def equal_offset(self, other: 'RepCl') -> bool:
+        if (other.hlc != self.hlc) or (other.offset_bmp != self.offset_bmp) or (other.offsets != self.offsets):
+            return False
+        return True
+
+    def recv(self, other: 'RepCl') -> None:
+        new_hlc = max(self.hlc, other.hlc, self.get_current_epoch())
+        a = self
+        b = other
+
+        a.shift(new_hlc)
+        a.merge_same_epoch(b)
+
+        if self.equal_offset(a) and other.equal_offset(a):
+            a.counters = max(a.counters, other.counters)
+            a.counters += 1
+        elif self.equal_offset(a) and not other.equal_offset(a):
+            a.counters += 1
+        elif not self.equal_offset(a) and other.equal_offset(a):
+            a.counters = other.counters
+            a.counters += 1
+        else:
+            a.counters = 0
+
+        self = a
+
+        index = 0
+        bitmap = self.offset_bmp
+        while bitmap > 0:
+            proc_id = int(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
+            if proc_id == self.proc_id:
+                self.set_offset_at_index(index, 0)
+
+            bitmap = bitmap & (bitmap - 1)
+            index += 1
+
+        self.offset_bmp |= 1 << self.proc_id
