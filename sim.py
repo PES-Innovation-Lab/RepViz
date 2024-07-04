@@ -28,12 +28,12 @@ while True:
     timeVec = None
     timeRep = None
 
-    # if proc_id == other_proc_id:
-    timeRep = repcl[proc_id].send_local()
-    timeVec = veccl[proc_id].advance()
-    #else:
-    #    timeRep = repcl[proc_id].merge(repcl[other_proc_id])
-    #    timeVec = veccl[proc_id].merge(veccl[other_proc_id])
+    if proc_id == other_proc_id:
+        timeRep = repcl[proc_id].send_local()
+        timeVec = veccl[proc_id].advance()
+    else:
+        timeRep = repcl[proc_id].recv(repcl[other_proc_id])
+        timeVec = veccl[proc_id].merge(veccl[other_proc_id])
 
     print(f"RepCl: {timeRep}, VecCl: {timeVec}")
 
