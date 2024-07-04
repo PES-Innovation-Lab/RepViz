@@ -11,7 +11,7 @@ class VecCl:
         self.proc_id = proc_id
         self.proc_count = proc_count
         self.counter_bit_width = counter_bit_width
-        self.counter_array = [0 for _ in np.arange(proc_count)]
+        self.counter_array = [np.uint64(0) for _ in np.arange(proc_count)]
 
     def __repr__(self) -> str:
         return f'VectorCl(proc_id={self.proc_id}, counters={self.counter_array})'
