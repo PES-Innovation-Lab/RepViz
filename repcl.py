@@ -3,16 +3,16 @@ import numpy as np
 import math
 
 class RepCl:
-    def __init__(self, proc_id: int, interval: int, epsilon: float, bits_per_offset: int) -> None:
-        self.proc_id = proc_id
+    def __init__(self, proc_id: np.uint64, interval: int, epsilon: float, bits_per_offset: int) -> None:
+        self.proc_id: np.uint64 = proc_id
         self.interval = interval
         self.epsilon = epsilon
         self.bits_per_offset = bits_per_offset
 
         self.hlc: np.uint64 = self.get_current_epoch()
-        self.offset_bmp = np.uint64(0)
-        self.offsets = np.uint64(0)
-        self.counters = np.uint64(0)
+        self.offset_bmp: np.uint64 = np.uint64(0)
+        self.offsets: np.uint64 = np.uint64(0)
+        self.counters: np.uint64 = np.uint64(0)
 
     def __repr__(self) -> str:
         offset_bmp = bin(self.offset_bmp)[2:].zfill(64)
@@ -49,16 +49,16 @@ class RepCl:
 
         bitmap = self.offset_bmp
         while (bitmap > 0):
-            process_id = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
+            process_id: np.uint64 = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
             offset_at_index = self.get_offset_at_index(index)
             new_offset = min(new_hlc - (self.hlc - offset_at_index), self.epsilon)
 
             if (new_offset >= self.epsilon):
                 self.remove_offset_at_index(index)
-                self.offset_bmp = self.offset_bmp & ~(1 << process_id)
+                self.offset_bmp = self.offset_bmp & np.uint64(~(1 << process_id))
             else:
                 self.set_offset_at_index(index, new_offset)
-                self.offset_bmp = self.offset_bmp | (1 << process_id)
+                self.offset_bmp = self.offset_bmp | np.uint64(1 << process_id)
 
             bitmap = bitmap & (bitmap - 1)
             index += 1
@@ -81,18 +81,18 @@ class RepCl:
 
     @staticmethod
     def hamming_weight(v: np.uint32) -> int:
-        v = v - ((v >> 1) & 0x55555555);
-        v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-        count = ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
+        v = v - ((v >> 1) & 0x55555555)
+        v = np.uint32((v & 0x33333333) + ((v >> 2) & 0x33333333))
+        count = ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24
         return count
 
     @staticmethod
-    def get_index_from_proc_id(bitmap: np.uint64, proc_id: int) -> int:
-        bmp_lo = np.uint32(bitmap & ((1 << 32) - 1))
+    def get_index_from_proc_id(bitmap: np.uint64, proc_id: np.uint64) -> int:
+        bmp_lo: np.uint32 = np.uint32(bitmap & ((1 << 32) - 1))
         if proc_id < 32:
             bmp_lo <<= (32 - proc_id)
             return RepCl.hamming_weight(bmp_lo)
-        bmp_hi = np.uint32(bitmap >> 32)
+        bmp_hi: np.uint32 = np.uint32(bitmap >> 32)
         bmp_hi <<= (64 - proc_id)
         return RepCl.hamming_weight(bmp_hi) + RepCl.hamming_weight(bmp_lo)
 
@@ -110,17 +110,17 @@ class RepCl:
 
             index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
             self.set_offset_at_index(index, new_offset)
-            self.offset_bmp |= (1 << self.proc_id)
+            self.offset_bmp |= np.uint64(1 << self.proc_id)
 
-            self.counters = 0
-            self.offset_bmp = self.offset_bmp | (1 << self.proc_id)
+            self.counters = np.uint64(0)
+            self.offset_bmp = self.offset_bmp | np.uint64(1 << self.proc_id)
         else:
-            self.counters = 0
+            self.counters = np.uint64(0)
             self.shift(new_hlc)
 
             index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
             self.set_offset_at_index(index, 0)
-            self.offset_bmp |= (1 << self.proc_id)
+            self.offset_bmp |= np.uint64(1 << self.proc_id)
 
         endtime = time.time()
         return endtime - startime
@@ -134,10 +134,10 @@ class RepCl:
             new_offset = min(self.get_offset_at_index(index), other.get_offset_at_index(index))
             if new_offset >= self.epsilon:
                 self.remove_offset_at_index(index)
-                self.offset_bmp &= ~(1 << pos)
+                self.offset_bmp &= ~np.uint64(1 << pos)
             else:
                 self.set_offset_at_index(index, new_offset)
-                self.offset_bmp |= 1 << pos
+                self.offset_bmp |= np.uint64(1 << pos)
 
             bitmap &= bitmap - 1
             index += 1
@@ -165,13 +165,13 @@ class RepCl:
             a.counters = other.counters
             a.counters += 1
         else:
-            a.counters = 0
+            a.counters = np.uint64(0)
 
         self = a
 
         index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
         self.set_offset_at_index(index, 0)
-        self.offset_bmp |= (1 << self.proc_id)
+        self.offset_bmp |= np.uint64(1 << self.proc_id)
 
         end_time = time.time()  # record end time
         return end_time - start_time
