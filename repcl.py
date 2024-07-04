@@ -79,6 +79,23 @@ class RepCl:
         offset = self.extract(self.offsets, self.bits_per_offset, index * self.bits_per_offset)
         return offset
 
+    @staticmethod
+    def hamming_weight(v: np.uint32) -> int:
+        v = v - ((v >> 1) & 0x55555555);
+        v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+        count = ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
+        return count
+
+    @staticmethod
+    def get_index_from_proc_id(bitmap: np.uint64, proc_id: int) -> int:
+        bmp_lo = np.uint32(bitmap & ((1 << 32) - 1))
+        if proc_id < 32:
+            bmp_lo <<= (32 - proc_id)
+            return RepCl.hamming_weight(bmp_lo)
+        bmp_hi = np.uint32(bitmap >> 32)
+        bmp_hi <<= (64 - proc_id)
+        return RepCl.hamming_weight(bmp_hi) + RepCl.hamming_weight(bmp_lo)
+
     def send_local(self) -> float:
         startime = time.time()
 
@@ -91,17 +108,9 @@ class RepCl:
         elif (new_hlc == self.hlc):
             new_offset = min(new_offset, offset_at_pid)
 
-            index = 0
-            bitmap = self.offset_bmp
-            while (bitmap > 0):
-                process_id = int(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
-                if (process_id == self.proc_id):
-                    self.set_offset_at_index(index, new_offset)
-                    self.offset_bmp = self.offset_bmp | (1 << process_id)
-                    break
-
-                bitmap = bitmap & (bitmap - 1)
-                index += 1
+            index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
+            self.set_offset_at_index(index, new_offset)
+            self.offset_bmp |= (1 << self.proc_id)
 
             self.counters = 0
             self.offset_bmp = self.offset_bmp | (1 << self.proc_id)
@@ -109,19 +118,9 @@ class RepCl:
             self.counters = 0
             self.shift(new_hlc)
 
-            index = 0
-            bitmap = self.offset_bmp
-            while (bitmap > 0):
-                process_id = int(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
-                if (process_id == self.proc_id):
-                    self.set_offset_at_index(index, 0)
-                    self.offset_bmp = self.offset_bmp | (1 << process_id)
-                    break
-
-                bitmap = bitmap & (bitmap - 1)
-                index += 1
-
-            self.offset_bmp = self.offset_bmp | (1 << self.proc_id)
+            index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
+            self.set_offset_at_index(index, 0)
+            self.offset_bmp |= (1 << self.proc_id)
 
         endtime = time.time()
         return endtime - startime
@@ -170,18 +169,9 @@ class RepCl:
 
         self = a
 
-        index = 0
-        bitmap = self.offset_bmp
-        while bitmap > 0:
-            proc_id = int(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
-            if proc_id == self.proc_id:
-                self.set_offset_at_index(index, 0)
-                break
-
-            bitmap = bitmap & (bitmap - 1)
-            index += 1
-
-        self.offset_bmp |= 1 << self.proc_id
+        index = self.get_index_from_proc_id(self.offset_bmp, self.proc_id)
+        self.set_offset_at_index(index, 0)
+        self.offset_bmp |= (1 << self.proc_id)
 
         end_time = time.time()  # record end time
         return end_time - start_time
