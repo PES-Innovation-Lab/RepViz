@@ -26,7 +26,7 @@ class RepCl:
     @staticmethod
     def extract(number, k, p):
         return ((1 << k) - 1) & (number >> p)
-    
+
     def remove_offset_at_index(self, index):
         # 010 011 101
         #   2   1   0
@@ -59,16 +59,16 @@ class RepCl:
             else:
                 self.set_offset_at_index(index, new_offset)
                 self.offset_bmp = self.offset_bmp | (1 << process_id)
-            
+
             bitmap = bitmap & (bitmap - 1)
             index += 1
-        
+
         self.hlc = new_hlc
 
     def set_offset_at_index(self, index, new_offset):
         if new_offset > (1 << self.bits_per_offset) - 1:
             raise ValueError('Offset value too large')
-        
+
         mask = np.uint64((1 << self.bits_per_offset) - 1) << (index * self.bits_per_offset)
         mask = ~mask
 
@@ -92,16 +92,16 @@ class RepCl:
             new_offset = min(new_offset, offset_at_pid)
 
             index = 0
-            bitmap = self.offset_bmp    
+            bitmap = self.offset_bmp
             while (bitmap > 0):
-                process_id = math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1)
+                process_id = int(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
                 if (process_id == self.proc_id):
                     self.set_offset_at_index(index, new_offset)
                     self.offset_bmp = self.offset_bmp | (1 << process_id)
-                
+
                 bitmap = bitmap & (bitmap - 1)
                 index += 1
-            
+
             self.counters = 0
             self.offset_bmp = self.offset_bmp | (1 << self.proc_id)
         else:
@@ -111,7 +111,7 @@ class RepCl:
             index = 0
             bitmap = self.offset_bmp
             while (bitmap > 0):
-                process_id = math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1)
+                process_id = int(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
                 if (process_id == self.proc_id):
                     self.set_offset_at_index(index, 0)
                     self.offset_bmp = self.offset_bmp | (1 << process_id)
