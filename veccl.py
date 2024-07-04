@@ -19,7 +19,7 @@ class VecCl:
     def advance(self) -> float:
         starttime = time.time()
 
-        if (self.counter_array[self.proc_id] + 1) < 2**self.counter_bit_width:
+        if (self.counter_array[self.proc_id] + 1) < (1 << self.counter_bit_width):
             self.counter_array[self.proc_id] += 1
         endtime = time.time()
 
