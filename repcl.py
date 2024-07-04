@@ -51,7 +51,7 @@ class RepCl:
         while (bitmap > 0):
             process_id = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
             offset_at_index = self.get_offset_at_index(index)
-            new_offset = math.min(new_hlc - (self.hlc - offset_at_index), self.epsilon)
+            new_offset = min(new_hlc - (self.hlc - offset_at_index), self.epsilon)
 
             if (new_offset >= self.epsilon):
                 self.remove_offset_at_index(index)
@@ -80,14 +80,14 @@ class RepCl:
         return offset
 
     def send_local(self) -> None:
-        new_hlc = math.max(self.hlc, self.get_current_epoch())
+        new_hlc = max(self.hlc, self.get_current_epoch())
         new_offset = new_hlc - self.hlc
         offset_at_pid = self.get_offset_at_index(self.proc_id)
 
         if (new_hlc == self.hlc and offset_at_pid <= new_offset):
             self.counters += 1
         elif (new_hlc == self.hlc):
-            new_offset = math.min(new_offset, offset_at_pid)
+            new_offset = min(new_offset, offset_at_pid)
 
             index = 0
             bitmap = self.offset_bmp
