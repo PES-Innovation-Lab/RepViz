@@ -3,11 +3,11 @@ import numpy as np
 import math
 
 class RepCl:
-    def __init__(self, proc_id: np.uint64, interval: int, epsilon: float, bits_per_offset: int) -> None:
+    def __init__(self, proc_id: np.uint64, interval: int, epsilon: float) -> None:
         self.proc_id: np.uint64 = proc_id
         self.interval = interval
         self.epsilon = epsilon
-        self.bits_per_offset = bits_per_offset
+        self.bits_per_offset = math.ceil(math.log2(epsilon))
 
         self.hlc: np.uint64 = self.get_current_epoch()
         self.offset_bmp: np.uint64 = np.uint64(0)
