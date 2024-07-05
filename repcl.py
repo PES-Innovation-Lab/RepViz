@@ -49,16 +49,16 @@ class RepCl:
 
         bitmap = self.offset_bmp
         while (bitmap > 0):
-            process_id: np.uint64 = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
+            process_bit: np.uint64 = np.uint64((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1)
             offset_at_index = self.get_offset_at_index(index)
             new_offset = min(new_hlc - (self.hlc - offset_at_index), self.epsilon)
 
             if (new_offset >= self.epsilon):
                 self.remove_offset_at_index(index)
-                self.offset_bmp = self.offset_bmp & np.uint64(~(1 << process_id))
+                self.offset_bmp = self.offset_bmp & (~process_bit)
             else:
                 self.set_offset_at_index(index, new_offset)
-                self.offset_bmp = self.offset_bmp | np.uint64(1 << process_id)
+                self.offset_bmp = self.offset_bmp | process_bit
 
             bitmap = bitmap & (bitmap - 1)
             index += 1
@@ -130,14 +130,14 @@ class RepCl:
         bitmap = self.offset_bmp
         index = 0
         while bitmap > 0:
-            pos = np.uint64(math.log2((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1))
+            pos_bit = np.uint64((~(bitmap ^ (~(bitmap - 1))) + 1) >> 1)
             new_offset = min(self.get_offset_at_index(index), other.get_offset_at_index(index))
             if new_offset >= self.epsilon:
                 self.remove_offset_at_index(index)
-                self.offset_bmp &= ~np.uint64(1 << pos)
+                self.offset_bmp &= (~pos_bit)
             else:
                 self.set_offset_at_index(index, new_offset)
-                self.offset_bmp |= np.uint64(1 << pos)
+                self.offset_bmp |= pos_bit
 
             bitmap &= bitmap - 1
             index += 1
