@@ -13,6 +13,7 @@ REPCL_EPSILON = 4
 ALPHA = 1
 DELTA = 1
 
+# simulate local events and send events of an individual process
 def sim_proc(pid: int) -> None:
     while True:
         phy_clocks[pid] += random.randint(0, 1000)
@@ -30,9 +31,12 @@ repcls = [RepCl(pid, phy_clocks[pid], REPCL_INTERVAL, REPCL_EPSILON) for pid in 
 
 procs = [Process(target=sim_proc, args=(pid,)) for pid in range(PROC_COUNT)]
 
+# start all processes
 for proc in procs:
     proc.start()
 
+# receive send events in all processes
+print('PID,EPSILON,INTERVAL,DELTA,ALPHA,OFFSET_SIZE,COUNTER_SIZE,HLC')
 while True:
     for pid in range(PROC_COUNT):
         while not queues[pid].empty():
