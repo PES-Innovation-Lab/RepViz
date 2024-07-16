@@ -20,11 +20,46 @@ class RepCl:
         counters = bin(np.uint64(self.counters))[2:].zfill(64)
         return f'RepCl(proc_id : {self.proc_id}\n\t, hlc : {self.hlc}\n\t, offset_bmp : {offset_bmp}\n\t, offsets : {offsets}\n\t, counters : {counters}\n\t)'
 
-g
+    def __lt__(self, repcl: 'RepCl'):
+        if(self.hlc < repcl.hlc):
+            return True
+        elif(self.hlc > repcl.hlc):
+            return False
+        else:
+            for i in range(RepCl.hamming_weight_full(self.offset_bmp)):
+                if ((self.offsets >> (i * self.bits_per_offset)) & ((1 << self.bits_per_offset) - 1)) > ((repcl.offsets >> (i * repcl.bits_per_offset)) & ((1 << repcl.bits_per_offset) - 1)):
+                    return False
+            # for i, j in zip(self.vector_offsets, repcl.vector_offsets):
+            #     if i > j:
+            #         return False
+            if self.counters <= repcl.counters:
+                return True
+            return False
 
+    def __gt__(self, repcl: 'RepCl'):
+        if(self.hlc > repcl.hlc):
+            return True
+        elif(self.hlc < repcl.hlc):
+            return False
+        else:
+            for i in range(RepCl.hamming_weight_full(self.offset_bmp)):
+                if ((self.offsets >> (i * self.bits_per_offset)) & ((1 << self.bits_per_offset) - 1)) < ((repcl.offsets >> (i * repcl.bits_per_offset)) & ((1 << repcl.bits_per_offset) - 1)):
+                    return False
+            # for i, j in zip(self.vector_offsets, repcl.vector_offsets):
+            #     if i < j:
+            #         return False
+            if self.counters >= repcl.counters:
+                return True
+            return False
 
+    def __eq__(self, repcl):
+        return not(self > repcl) and (not(self < repcl))
 
+    def __le__(self, repcl: 'RepCl'):
+        return self < repcl or self == repcl
 
+    def __ge__(self, repcl: 'RepCl'):
+        return self > repcl or self == repcl
 
     def to_dict(self) :
         offset_bmp = bin(self.offset_bmp)[2:].zfill(64)
@@ -102,6 +137,10 @@ g
         v = np.uint32((v & 0x33333333) + ((v >> 2) & 0x33333333))
         count = ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24
         return np.uint64(count)
+
+    @staticmethod
+    def hamming_weight_full(v: np.uint64) -> int:
+        return RepCl.hamming_weight(v >> 32) + RepCl.hamming_weight(v & ((1 << 32) - 1))
 
     @staticmethod
     def get_index_from_proc_id(bitmap: np.uint64, proc_id: np.uint64) -> int:
