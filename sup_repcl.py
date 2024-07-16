@@ -1,13 +1,12 @@
-import time
+import time, math, os
 import numpy as np
-import math
 
 class RepCl:
-    def __init__(self, proc_id: np.uint64, interval: int, epsilon: float) -> None:
+    def __init__(self, proc_id: np.uint64) -> None:
         self.proc_id: np.uint64 = np.uint64(proc_id)
-        self.interval = interval
-        self.epsilon = epsilon
-        self.bits_per_offset = math.ceil(math.log2(epsilon))
+        self.interval = int(os.getenv('INTERVAL'))
+        self.epsilon = float(os.getenv('EPSILON'))
+        self.bits_per_offset = math.ceil(math.log2(self.epsilon))
 
         self.hlc: np.uint64 = np.uint64(self.get_current_epoch())
         self.offset_bmp: np.uint64 = np.uint64(0)
@@ -19,11 +18,6 @@ class RepCl:
         offsets = bin(np.uint64(self.offsets))[2:].zfill(64)
         counters = bin(np.uint64(self.counters))[2:].zfill(64)
         return f'RepCl(proc_id : {self.proc_id}\n\t, hlc : {self.hlc}\n\t, offset_bmp : {offset_bmp}\n\t, offsets : {offsets}\n\t, counters : {counters}\n\t)'
-
-g
-
-
-
 
 
     def to_dict(self) :

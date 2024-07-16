@@ -1,4 +1,4 @@
-import time
+import time, os
 import numpy as np
 
 '''
@@ -7,11 +7,11 @@ offsets and counters between the current process and other
 processes. As a result, the bitmap field is not required.
 '''
 class VecCl:
-    def __init__(self, proc_id: int, proc_count: int, counter_bit_width: int) -> None:
+    def __init__(self, proc_id: int) -> None:
         self.proc_id = proc_id
-        self.proc_count = proc_count
-        self.counter_bit_width = counter_bit_width
-        self.counter_array = [np.uint64(0) for _ in np.arange(proc_count)]
+        self.proc_count = os.getenv('PROC_COUNT')
+        self.counter_bit_width = os.getenv('C_BIT_WIDTH')
+        self.counter_array = [np.uint64(0) for _ in np.arange(self.proc_count)]
 
     def __repr__(self) -> str:
         return f'VectorCl(proc_id={self.proc_id}, counters={self.counter_array})'

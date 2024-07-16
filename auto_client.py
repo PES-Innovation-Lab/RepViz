@@ -1,8 +1,13 @@
-import time, requests, pickle
-from datetime import datetime
-from repcl import RepCl
-from veccl import VecCl
+import time, requests, pickle, os
+from sup_repcl import RepCl
+from sup_veccl import VecCl
 import numpy as np
+
+
+INTERVAL = os.getenv('INTERVAL')
+EPSILON = os.getenv('EPSILON')
+PROC_COUNT = os.getenv('PROC_COUNT')
+C_BIT_WIDTH = os.getenv('C_BIT_WIDTH')
 
 masterURL = "http://localhost:5000"
 replicaURL = "http://localhost:5001"
@@ -10,8 +15,8 @@ replicaURL = "http://localhost:5001"
 file = open("requests.txt", 'r')
 req_num = 0
 setNum = 1
-repcl_time = RepCl(2, np.uint64(1), np.uint64(1))
-veccl_time = VecCl(2, 3, 64)
+repcl_time = RepCl(2)
+veccl_time = VecCl(2)
 
 for line in file.readlines() :
     req_num += 1

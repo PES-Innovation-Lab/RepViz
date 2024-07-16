@@ -1,8 +1,7 @@
 from flask import Flask, request
-import uuid, requests, time, pickle, json
-from datetime import datetime
-from repcl import RepCl
-from veccl import VecCl
+import uuid, requests, time, pickle, json, os
+from sup_repcl import RepCl
+from sup_veccl import VecCl
 import numpy as np
 
 
@@ -23,8 +22,8 @@ replicaData = {"known-replica-1" : "rep_init_1",
               "known-replica-4"  : "rep_init_4"}
 event_logs = {}
 sync_count = 0
-repcl_time = RepCl(1, np.uint64(1), np.uint64(1))
-veccl_time = VecCl(1, 3, 64)
+repcl_time = RepCl(1)
+veccl_time = VecCl(1)
 
 
 master_url = "http://127.0.0.1:5000"

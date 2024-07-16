@@ -28,9 +28,9 @@ and replica having the old one (get exchanged) -> TIMESTAMPS REQUIRED HERE
 
 from flask import Flask, request
 import uuid, requests, time, pickle
-import json
-from repcl import RepCl
-from veccl import VecCl
+import json, os
+from sup_repcl import RepCl
+from sup_veccl import VecCl
 
 # RUNNING ON PORT 5000
 
@@ -47,6 +47,10 @@ GET delete to replica sent as -> {key : <UUID>, type : "delete"}
 
 '''
 
+INTERVAL = os.getenv('INTERVAL')
+EPSILON = os.getenv('EPSILON')
+
+
 app = Flask(__name__)
 
 # masterData will hold only data sent through POST and PUT requests
@@ -59,8 +63,8 @@ masterData = {"known-master-1" : "mas_init_1",
 event_logs = {}
 fwd_flag = 0
 sync_count = 0
-repcl_time = RepCl(0, 1, 1)
-veccl_time = VecCl(0, 3, 64)
+repcl_time = RepCl(0)
+veccl_time = VecCl(0)
 
 def enable_sync() :
     global sync_count
