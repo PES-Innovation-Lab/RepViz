@@ -93,7 +93,7 @@ void Process::PrintStatistics()
 {
     std::cout 
     << nodeId << ","
-    << m_vc.GetSize() << ","
+    << m_vc.GetClockSize() << ","
     << m_rc.GetHLC() << ","
     << m_rc.GetBitmap() << ","
     << m_rc.GetOffsets() << ","

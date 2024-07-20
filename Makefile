@@ -1,5 +1,5 @@
 cc := g++
-cflags := -std=c++17 -pipe -Wall -ggdb -Isrc/
+cflags := -std=c++17 -pipe -Wall -Ofast -Isrc/
 
 source := src/*.cc
 headers := src/*.h

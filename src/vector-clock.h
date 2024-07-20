@@ -11,7 +11,7 @@ public:
     VectorClock(uint32_t node_id_) : node_id(node_id_) {}
     void SendLocal(void);
     void Recv(const VectorClock& incoming);
-    size_t GetSize(void);
+    size_t GetClockSize(void);
     void PrintClock(void);
 
 private:

@@ -14,8 +14,8 @@ void VectorClock::Recv(const VectorClock& incoming) {
     SendLocal();
 }
 
-size_t VectorClock::GetSize(void) {
-    return sizeof(timestamps);
+size_t VectorClock::GetClockSize(void) {
+    return sizeof(timestamps) * 8;
 }
 
 void VectorClock::PrintClock(void) {
