@@ -15,7 +15,22 @@ void VectorClock::Recv(const VectorClock& incoming) {
 }
 
 size_t VectorClock::GetClockSize(void) {
-    return sizeof(timestamps) * 8;
+    size_t max_size = 0;
+    for (int i = 0; i < NUM_PROCS; i++) {
+        size_t size = 1;
+        while ((size_t)(timestamps[i] >>= 1)) size++;
+        if (size > max_size) {
+            max_size = size;
+        }
+    }
+    return max_size * NUM_PROCS;
+
+    // size_t size = 0;
+    // for (int i = 0; i < NUM_PROCS; i++) {
+    //     size += log2(timestamps[i]) + 1;
+    // }
+    // return size;
+    // return sizeof(timestamps) * 8;
 }
 
 void VectorClock::PrintClock(void) {
