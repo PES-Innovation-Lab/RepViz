@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 #include "replay-config.h"
 
 class VectorClock {
@@ -13,6 +14,7 @@ public:
     void Recv(const VectorClock& incoming);
     size_t GetClockSize(void);
     void PrintClock(void);
+    void PrintTimestamps(void);
 
 private:
     uint32_t node_id;

@@ -94,13 +94,17 @@ void Process::PrintStatistics()
     std::cout 
     << nodeId << ","
     << m_vc.GetClockSize() << ","
+    << m_rc.GetClockSize() << ","
+    << m_rc.GetOffsetSize() << ","
+    << m_rc.GetCounterSize() << ",";
+
+    m_vc.PrintTimestamps();
+
+    std::cout 
     << m_rc.GetHLC() << ","
     << m_rc.GetBitmap() << ","
     << m_rc.GetOffsets() << ","
     << m_rc.GetCounters() << ","
-    << m_rc.GetOffsetSize() << ","
-    << m_rc.GetCounterSize() << ","
-    << m_rc.GetClockSize() << ","
     << EPSILON << ","
     << INTERVAL << "," 
     << DELTA << "," 
