@@ -15,7 +15,7 @@ class Output:
         self.max_offset_bits = int(re.search(r'.*M\.(\d+)\.csv', path).groups()[0])
         self.df = pd.read_csv(path)
 
-paths = glob.glob('results/*.csv')
+paths = glob.glob('14-min-results/*.csv')
 
 def do(with_what):
     outputs = []
