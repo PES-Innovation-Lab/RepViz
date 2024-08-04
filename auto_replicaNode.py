@@ -25,8 +25,7 @@ sync_count = 0
 repcl_time = RepCl(1)
 veccl_time = VecCl(1)
 
-
-master_url = "http://127.0.0.1:5000"
+master_url = "http://master-service.default.svc.cluster.local"
 
 @app.route('/', methods=['GET', 'POST'])
 def index() :
@@ -56,7 +55,7 @@ def index() :
                     event_logs[item[0]] = item[1]
 
             # Writing "After" data to file
-            with open("replica.txt", "w") as file :
+            with open("/data/replica.txt", "w") as file :
                 #file.write(f"\n\nAfter sync # {sync_count} : \n")
                 file.write(json.dumps(event_logs))
             
@@ -142,4 +141,4 @@ def index() :
     '''
     
 if __name__ == '__main__':
-    app.run(debug = False, port = 5001)
+    app.run(debug = False, host='0.0.0.0', port = 5001)

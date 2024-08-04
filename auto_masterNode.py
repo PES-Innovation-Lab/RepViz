@@ -71,11 +71,6 @@ def enable_sync() :
     print("inside sync function")
     sync_count += 1
 
-    # Writing "Before" data to file
-    # with open("master.txt", "a") as file :
-    #     file.write(f"\n\nBefore sync # {sync_count} : \n")
-    #     file.write(json.dumps(event_logs))
-
     print("Syncing\n")
 
     # Sending master's event logs to replica in JSON format
@@ -84,7 +79,9 @@ def enable_sync() :
     #print(f"Master recieved replica logs : {response}")
 
 
-replica_url = "http://127.0.0.1:5001"
+#replica_url = "http://replica-service:5001"
+replica_url = "http://replica-service.default.svc.cluster.local"
+
 
 @app.route('/', methods=['GET', 'POST'])
 def index() :
@@ -101,7 +98,7 @@ def index() :
                     event_logs[item[0]] = item[1]
 
             # Writing "After" data to file
-            with open("master.txt", "w") as file :
+            with open("/data/master.txt", "w") as file :
                 #file.write(f"\n\nAfter sync # {sync_count} : \n")
                 file.write(json.dumps(event_logs))
             print("Done syncing\n")
@@ -218,4 +215,4 @@ def index() :
 
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=False, host='0.0.0.0', port = 5000)

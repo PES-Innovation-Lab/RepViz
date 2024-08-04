@@ -202,6 +202,7 @@ class RepCl:
             return False
         return True
 
+
     def recv(self, other: 'RepCl') -> float:
         start_time = time.time()  # record start time
         new_hlc = np.uint64(max(self.hlc, other.hlc, self.get_current_epoch()))
@@ -230,3 +231,18 @@ class RepCl:
 
         end_time = time.time()  # record end time
         return end_time - start_time
+
+    def GetOffsetSize(self) :
+        return (self.hamming_weight_full(self.offset_bmp) * self.bits_per_offset) + 1
+
+    def GetCounterSize(self) :
+        return int(math.log2(self.counters))
+
+    def GetHLCSize(self) :
+        return int(math.log2(self.hlc))
+    
+    def GetBitmapSize(self):
+        return 64
+
+    def GetClockSize(self) :
+        return self.GetOffsetSize() + self.GetCounterSize() + self.GetHLCSize() + self.GetBitmapSize()

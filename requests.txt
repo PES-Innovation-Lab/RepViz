@@ -1,4 +1,120 @@
 POST message-1
 GET get known-master-3
-GET put known-master-1 updated-val-1
+GET put known-master-1 updated-val
 GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+POST message-1
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
+POST message-3
+GET get known-master-3
+GET put known-master-1 updated-val
+GET delete known-master-2
+POST message-2
+GET put known-replica-2 updated-val-1
+GET get known-replica-1
